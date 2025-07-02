@@ -64,12 +64,6 @@
             <p class="text-center max-w-3xl mx-auto text-gray-700">所有裝備已根據其核心功能，分為三大類別：<strong class="text-[#588157]">A 類（自我管理）</strong>、<strong class="text-[#588157]">B 類（團隊合作）</strong>與<strong class="text-[#588157]">C 類（安全應變）</strong>。您可以點擊下方按鈕篩選特定組別，或點擊任一卡片來深入探索其任務提示。</p>
         </section>
 
-        <section id="chart-section" class="mb-12">
-             <div class="chart-container">
-                <canvas id="categoryChart"></canvas>
-            </div>
-        </section>
-
         <section id="filters" class="mb-8 flex flex-wrap justify-center gap-2 md:gap-4">
         </section>
 
@@ -141,11 +135,15 @@
 
             let activeFilter = '所有';
 
+            // 確保這裡的類別是從正確的數據中提取，並保持一致性
             const categories = ['所有', ...new Set(equipmentData.map(item => item.category))].sort((a, b) => {
                 if (a === '所有') return -1;
                 if (b === '所有') return 1;
-                return a.localeCompare(b, 'zh-Hant');
+                // 為了讓 A, B, C 依序排列，可以特別處理
+                const order = { 'A 類（自我管理）': 1, 'B 類（團隊合作）': 2, 'C 類（安全應變）': 3 };
+                return (order[a] || 99) - (order[b] || 99); // 使用預設排序，如果不在列表中則放到後面
             });
+
             const categoryCounts = equipmentData.reduce((acc, item) => {
                 acc[item.category] = (acc[item.category] || 0) + 1;
                 return acc;
@@ -223,69 +221,11 @@
                 }
             });
 
-            function renderChart() {
-                const sortedCategories = Object.keys(categoryCounts).sort((a,b) => a.localeCompare(b, 'zh-Hant'));
-                const sortedCounts = sortedCategories.map(cat => categoryCounts[cat]);
-
-                const ctx = document.getElementById('categoryChart').getContext('2d');
-                new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: sortedCategories,
-                        datasets: [{
-                            label: '裝備數量',
-                            data: sortedCounts,
-                            backgroundColor: [
-                                'rgba(58, 90, 64, 0.7)',
-                                'rgba(88, 129, 87, 0.7)',
-                                'rgba(163, 177, 138, 0.7)'
-                            ],
-                            borderColor: [
-                                'rgba(58, 90, 64, 1)',
-                                'rgba(88, 129, 87, 1)',
-                                'rgba(163, 177, 138, 1)'
-                            ],
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: false
-                            },
-                            title: {
-                                display: true,
-                                text: '裝備類別分佈圖',
-                                font: {
-                                    size: 18,
-                                    family: "'Noto Sans TC', sans-serif"
-                                },
-                                color: '#3A5A40'
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    stepSize: 2,
-                                    color: '#4A4A4A'
-                                }
-                            },
-                            x: {
-                                ticks: {
-                                    color: '#4A4A4A'
-                                }
-                            }
-                        }
-                    }
-                });
-            }
+            // renderChart() 函式已移除
 
             renderFilters();
             renderCards();
-            renderChart();
+            // renderChart() 的呼叫已移除
         });
     </script>
 </body>
