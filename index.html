@@ -19,6 +19,9 @@
         body {
             font-family: 'Inter', 'Noto Sans TC', sans-serif;
         }
+        .perspective-container {
+            perspective: 1000px;
+        }
         .card-flip {
             transform-style: preserve-3d;
             transition: transform 0.6s;
@@ -27,6 +30,9 @@
             transform: rotateY(180deg);
         }
         .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
             backface-visibility: hidden;
             -webkit-backface-visibility: hidden;
         }
@@ -72,11 +78,11 @@
 
     <!-- Card Detail Modal -->
     <div id="modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden">
-        <div class="w-full max-w-md h-[70vh] max-h-[500px] perspective-[1000px]">
+        <div class="w-full max-w-md h-[70vh] max-h-[500px] perspective-container">
             <div id="modal-content" class="relative w-full h-full card-flip">
-                <div id="modal-front" class="absolute w-full h-full card-face bg-[#F8F4F0] rounded-2xl shadow-xl flex flex-col items-center justify-center p-6 border-4 border-white/50 text-center">
+                <div id="modal-front" class="card-face bg-[#F8F4F0] rounded-2xl shadow-xl flex flex-col items-center justify-center p-6 border-4 border-white/50 text-center">
                 </div>
-                <div id="modal-back" class="absolute w-full h-full card-face card-back bg-[#F8F4F0] rounded-2xl shadow-xl flex flex-col p-6 overflow-y-auto border-4 border-white/50">
+                <div id="modal-back" class="card-face card-back bg-[#F8F4F0] rounded-2xl shadow-xl flex flex-col p-6 overflow-y-auto border-4 border-white/50">
                 </div>
             </div>
         </div>
@@ -96,11 +102,9 @@
                 </div>
                 <div>
                     <strong class="text-gray-800">進行方式：</strong>
-                    <p>建議分成八個小小組</p>
                     <ol class="list-decimal list-inside space-y-2 mt-2">
-                        <li>請隊輔拿出手機（不知道是否每個隊輔都有）上這個綱頁連結。</li>
-                        <li>隊輔協助引導，討論每張裝備的功能與象徵。每位成員輪流選一張裝備卡分享與討論每張裝備的功能與提問，<strong class="text-[#588157]">［A 類（自我管理）、B 類（團隊合作）及C 類（安全應變）］</strong>為不同情境，所以請儘量各類中都有被討論到，不要只集中某一類。</li>
-                        <li>或者由小組<strong class="text-[#588157]">共同或隊輔決定選出最有感的3張卡片</strong>（從<strong class="text-[#588157]">A、B、C</strong>卡片中各挑一張），作為小隊代表責任行動的象徵進行討論。</li>
+                        <li>導師解說裝備的功能與象徵。引導每位學員輪流選一張裝備卡並分享卡片中的提問，<strong class="text-[#588157]">［A 類（自我管理）、B 類（團隊合作）及C 類（安全應變）］</strong>為不同情境，所以請儘量各類中都有被討論到，不要只集中某一類。</li>
+                        <li>由小組<strong class="text-[#588157]">共同或導師決定選出最有感的3張卡片</strong>（從<strong class="text-[#588157]">A、B、C</strong>卡片中各挑一張），作為小隊代表責任行動的象徵進行討論。</li>
                     </ol>
                 </div>
                 <div>
@@ -132,7 +136,7 @@
                 { id: 16, name: '手機', icon: '📱', category: 'A 類（自我管理）', func: '聯絡、記錄、導航、拍照、娛樂…現代多功能工具，但在野外不一定可靠。', symbol: '科技可以協助我們，但選擇怎麼用，是一種責任。', extension: '負責任的人會思考使用方式與時間，讓工具幫助完成任務，而不是造成分心或危險，更是自律力的試煉。', question: '手機很方便，它就像一個小小萬能工具箱！除了玩遊戲、看影片，你還會怎麼聰明地使用這個萬能工具，讓它幫助你生活，而不是讓你分心呢？' },
                 { id: 14, name: '指南針', icon: '🧭', category: 'A 類（自我管理）', func: '指示方向，是登山與野外定位不可或缺的基本工具。', symbol: '做決定要有方向與原則。', extension: '負責任的選擇，來自不跟風、不迷失，清楚知道「我要去哪裡」，而不是盲從別人的腳步。', question: '當班上同學都在做不太好的事情（像是下課一直滑手機、功課常常沒寫、或是隨意取笑其他同學），你會選擇跟著大家一起做，還是會堅持自己的原則，做一個有判斷力、知道如何做出正確選擇的人呢？' },
                 { id: 1, name: '登山背包', icon: '🎒', category: 'A 類（自我管理）', func: '承載所有裝備與物資，是登山旅程中不可或缺的基礎。', symbol: '責任不會自己走，你得選擇扛起它。', extension: '負責任的人會整理好自己的裝備與任務，不推卸、不遺漏。', question: '登山背包是用來裝所有東西的，它背在我們身上，提醒我們每一趟旅程都要把自己的東西帶好、照顧好。在學校或家裡，你有沒有哪些事情是本來應該自己完成的，像是寫功課、收拾房間、或是幫忙做家事？你曾經把這些『責任背包』丟給別人背，讓別人替你完成嗎？' },
-                { id: 5, name: '登山杖', icon: '🦯', category: 'A 類（自我管理）', func: '穩定重心、分擔膝蓋壓力，是長途健行的支援工具。', symbol: '支撐自己，也可能支撐他人。', extension: '負責任的人知道如何保持穩定，也願意成為別人的支柱。', question: '登山杖可以幫助我們走路走得更穩，走累了還可以靠它休息，就像是我們的好幫手。在學校或家裡，當你看到朋友遇到困難、心情不好，或是需要幫忙的時候，你會不會像登山杖一樣，主動去支持他，給他力量，還是會等著老師或其他人來幫忙呢？' },
+                { id: 5, name: '登山杖', icon: '�', category: 'A 類（自我管理）', func: '穩定重心、分擔膝蓋壓力，是長途健行的支援工具。', symbol: '支撐自己，也可能支撐他人。', extension: '負責任的人知道如何保持穩定，也願意成為別人的支柱。', question: '登山杖可以幫助我們走路走得更穩，走累了還可以靠它休息，就像是我們的好幫手。在學校或家裡，當你看到朋友遇到困難、心情不好，或是需要幫忙的時候，你會不會像登山杖一樣，主動去支持他，給他力量，還是會等著老師或其他人來幫忙呢？' },
                 { id: 9, name: '地圖', icon: '🗺️', category: 'A 類（自我管理）', func: '指引方向、計畫路線。', symbol: '清楚自己的目標，才能做出對的選擇。', extension: '負責任的人不只是想到哪走到哪，而是了解路線、設想後果再行動。', question: '地圖可以幫助我們知道要去哪裡，怎麼走才不會迷路。就像這樣，當你有一個目標想達成，例如想學好直排輪、讓功課進步，或是想要辦一個特別的班級活動時，你會不會先好好計畫一下，一步一步跟著計畫做呢？如果你的朋友對自己的目標有點不清楚，或不知道怎麼開始時，你願不願意像地圖一樣，跟他一起想想辦法、指引方向呢？' },
                 { id: 22, name: '睡墊', icon: '🛏️', category: 'A 類（自我管理）', func: '減壓保暖，隔絕地面寒氣，提升睡眠品質。', symbol: '讓自己睡得安穩是對任務的重視。', extension: '負責任的人願意事先思考如何讓自己處於穩定狀態，而非臨時應付。', question: '睡墊能讓我們睡得舒服又溫暖，就像是給身體一個可以好好放鬆的地方。在學校裡，如果你看到有人因為不舒服想睡覺，或是好像心情不好、需要幫忙的時候，你會不會願意告訴老師或大人，讓他們可以得到適當的照顧和休息呢？' },
                 
@@ -271,4 +275,4 @@
         });
     </script>
 </body>
-</html>
+</ht�
