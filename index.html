@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>互動式裝備任務卡</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Mountain Trail -->
+    <!-- Application Structure Plan: The application uses a master-detail and filtered-gallery structure. The main view is a responsive grid of all equipment cards, allowing users to get a quick overview. The cards are grouped into logical categories (A, B, C), and users can filter the gallery using interactive buttons. This categorized approach adds an information architecture layer, helping users understand the equipment's role. Clicking a card opens a modal window (the detail view), which presents the full information in a "flipped card" metaphor. This prevents cluttering the main screen and allows users to focus on one item at a time. A summary chart provides a quantitative overview of the equipment distribution by category. This structure was chosen for its high scannability, intuitive drill-down interaction, and ability to manage a moderately sized dataset (31 items) effectively on a single page. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: Full list of 31 equipment cards. Goal: Provide a comprehensive and filterable overview. Viz/Presentation: Interactive Grid Gallery (HTML/Tailwind). Interaction: Click to view details, filter by category. Justification: A grid is ideal for browsing a collection of visual items. Filtering enhances usability.
+        - Report Info: Individual card details (Function, Symbolism, Question). Goal: Allow focused reading of a single card's content. Viz/Presentation: Modal Dialog (HTML/Tailwind/JS). Interaction: Open on card click, close via button, flip via button. Justification: A modal provides a focused, contextual overlay without navigating away from the main gallery.
+        - Report Info: Categorization of equipment into Groups A, B, C. Goal: Summarize the composition of the equipment set. Viz/Presentation: Bar Chart (Chart.js/Canvas). Interaction: Static display with tooltips. Justification: A bar chart is a clear and simple way to show quantitative comparisons between categories.
+        - Report Info: Equipment names and icons. Goal: Quick identification. Viz/Presentation: Unicode Emoji Icons + Text. Interaction: N/A. Justification: Using emojis avoids broken image links, ensures fast loading, and provides a universally understood visual language that matches the friendly tone of the content.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+        }
+        .card-flip {
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+        }
+        .card-flip.is-flipped {
+            transform: rotateY(180deg);
+        }
+        .card-face {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+        .card-back {
+            transform: rotateY(180deg);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 40vh;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        .filter-btn {
+            transition: all 0.2s ease-in-out;
+        }
+        .filter-btn.active {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-[#F8F4F0] text-[#4A4A4A]">
+
+    <div id="app" class="container mx-auto p-4 md:p-8">
+
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-[#3A5A40]">裝備任務卡</h1>
+            <p class="mt-2 text-lg text-[#588157]">探索登山裝備背後的責任與智慧</p>
+        </header>
+
+        <section id="introduction" class="mb-12 bg-white/60 p-6 rounded-2xl shadow-sm">
+            <h2 class="text-2xl font-bold text-center mb-4 text-[#3A5A40]">歡迎來到互動式裝備卡</h2>
+            <p class="text-center max-w-3xl mx-auto text-gray-700">所有裝備已根據其核心功能，分為三大類別：<strong class="text-[#588157]">A 組（自我管理）</strong>、<strong class="text-[#588157]">B 組（團隊合作）</strong>與<strong class="text-[#588157]">C 組（安全應變）</strong>。您可以點擊下方按鈕篩選特定組別，或點擊任一卡片來深入探索其任務提示。</p>
+        </section>
+
+        <section id="chart-section" class="mb-12">
+             <div class="chart-container">
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </section>
+
+        <section id="filters" class="mb-8 flex flex-wrap justify-center gap-2 md:gap-4">
+        </section>
+
+        <main id="card-gallery" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
+        </main>
+
+    </div>
+
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50 hidden">
+        <div class="w-full max-w-md h-[70vh] max-h-[500px] perspective-[1000px]">
+            <div id="modal-content" class="relative w-full h-full card-flip">
+                <div id="modal-front" class="absolute w-full h-full card-face bg-[#F8F4F0] rounded-2xl shadow-xl flex flex-col items-center justify-center p-6 border-4 border-white/50 text-center">
+                </div>
+
+                <div id="modal-back" class="absolute w-full h-full card-face card-back bg-[#F8F4F0] rounded-2xl shadow-xl flex flex-col p-6 overflow-y-auto border-4 border-white/50">
+                </div>
+            </div>
+        </div>
+        <button id="close-modal-button" class="absolute top-4 right-4 text-white text-4xl leading-none z-10">&times;</button>
+        <button id="flip-button" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-[#3A5A40] text-white px-4 py-2 rounded-full shadow-lg">翻轉卡片</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const equipmentData = [
+                { id: 13, name: '水壺', icon: '💧', category: 'A 組（自我管理）', func: '儲存與補充水分，維持體力、預防脫水，是戶外活動中最基本且不可缺的裝備。', symbol: '把自己照顧好，是對團隊最基本的責任。', extension: '負責任的人不會等到出問題才補救，而是願意在日常中就做好準備，照顧好自己。', question: '當你自己累了、煩了，你會找方法讓自己恢復好心情嗎？你也會提醒別人該休息一下嗎？' },
+                { id: 20, name: '個人藥物', icon: '💊', category: 'A 組（自我管理）', func: '維持健康，處理自身特殊健康需求，避免危機。', symbol: '了解自己的弱點，反而是最強的自我管理。', extension: '負責任的人照顧自己的健康，避免成為團隊的負擔，也為團體安全盡一份力。', question: '你知道自己的身體或情緒什麼時候最容易出狀況嗎？你有為這些狀況準備嗎？' },
+                { id: 4, name: '登山鞋', icon: '👟', category: 'A 組（自我管理）', func: '支撐腳步、保護雙腳行走於困難地形。', symbol: '每一步選擇，踩出你負責的方向。', extension: '負責任的人會為自己選擇正確、穩固的路，而不是走捷徑或冒險。', question: '在學校或家庭中，有時要選擇比較辛苦但對的事（例如認真完成功課、主動做家務），你願意踏出這一步嗎？' },
+                { id: 31, name: '個人體力', icon: '💪', category: 'A 組（自我管理）', func: '體能、意志、精神狀態的總合，是完成任務的根本。', symbol: '知道自己的極限，也是一種勇敢與負責。', extension: '負責任的人懂得分配力氣，不一味逞強，也會適時尋求協助。', question: '當你很累、想偷懶時，你會選擇休息後再上，還是放棄自己該完成的責任？' },
+                { id: 21, name: '睡袋', icon: '💤', category: 'A 組（自我管理）', func: '保暖與休息，維持身體狀態與體力來源。', symbol: '適時休息是對未來挑戰的負責。', extension: '負責任的人知道要好好休息，讓自己恢復狀態，準備承擔下一段任務。', question: '你曾經為了打電動、追劇、趕功課而少睡嗎？你認為睡眠與健康是自己的責任嗎？' },
+                { id: 16, name: '手機', icon: '📱', category: 'A 組（自我管理）', func: '聯絡、記錄、導航、拍照、娛樂…現代多功能工具，但在野外不一定可靠。', symbol: '科技可以協助我們，但選擇怎麼用，是一種責任。', extension: '負責任的人會思考使用方式與時間，讓工具幫助完成任務，而不是造成分心或危險，更是自律力的試煉。', question: '你有想過手機除了玩遊戲和社群，還可以幫你完成任務或關心朋友嗎？' },
+                { id: 14, name: '指南針', icon: '🧭', category: 'A 組（自我管理）', func: '指示方向，是登山與野外定位不可或缺的基本工具。', symbol: '做決定要有方向與原則。', extension: '負責任的選擇，來自不跟風、不迷失，清楚知道「我要去哪裡」，而不是盲從別人的腳步。', question: '當別人都做某件事（例如沉迷手機、不交作業、嘲笑他人），你會跟著走還是堅持自己的原則？' },
+                { id: 1, name: '登山背包', icon: '🎒', category: 'A 組（自我管理）', func: '承載所有裝備與物資，是登山旅程中不可或缺的基礎。', symbol: '責任不會自己走，你得選擇扛起它。', extension: '負責任的人會整理好自己的裝備與任務，不推卸、不遺漏。', question: '你在家裡或班上有什麼是你應該自己做的事？你曾經讓別人幫你背了屬於你的責任嗎？' },
+                { id: 5, name: '登山杖', icon: '🪵', category: 'A 組（自我管理）', func: '穩定重心、分擔膝蓋壓力，是長途健行的支援工具。', symbol: '支撐自己，也可能支撐他人。', extension: '負責任的人知道如何保持穩定，也願意成為別人的支柱。', question: '當同學做事遇到困難、心情不好時，你會主動支持他？還是等老師或別人來幫？' },
+                { id: 9, name: '地圖', icon: '🗺️', category: 'A 組（自我管理）', func: '指引方向、計畫路線。', symbol: '清楚自己的目標，才能做出對的選擇。', extension: '負責任的人不只是想到哪走到哪，而是了解路線、設想後果再行動。', question: '開學後你有為自己的生活或學習定目標嗎？當朋友迷茫時，你願意一起想方向嗎？' },
+                { id: 22, name: '睡墊', icon: '🛏️', category: 'A 組（自我管理）', func: '減壓保暖，隔絕地面寒氣，提升睡眠品質。', symbol: '讓自己睡得安穩是對任務的重視。', extension: '負責任的人願意事先思考如何讓自己處於穩定狀態，而非臨時應付。', question: '在家中或學校，如果有人睡不好或情緒不穩，你會願意讓出空間或幫忙安頓嗎？' },
+                
+                { id: 7, name: '鍋具', icon: '🍲', category: 'B 組（團隊合作）', func: '煮食共享，是團隊生活中不可或缺的物資。', symbol: '分工合作，團隊共食、責任共擔。', extension: '負責任的人不只坐著等吃飯，也會願意動手清理與準備。', question: '在家庭、班上活動中，你通常是等別人準備好，還是會主動說『我來幫忙』？' },
+                { id: 8, name: '爐頭', icon: '🔥', category: 'B 組（團隊合作）', func: '生火加熱，是野外煮食的核心工具。', symbol: '每個團隊需要點火的人。', extension: '負責任的人懂得適時為團隊帶來溫暖，卻不任性地燃燒自己或他人。', question: '當大家沒精神或氣氛低落時，你會試著讓大家開心起來，還是跟著變安靜或抱怨？' },
+                { id: 24, name: '糧食', icon: '🍱', category: 'B 組（團隊合作）', func: '提供能量、維持生命；個人與共享食物代表自理與團隊精神。', symbol: '資源共享與自我管理一樣重要。', extension: '負責任的人知道什麼時候該分享、什麼時候該節制，兼顧自己與團隊。', question: '當有人忘記帶便當或零食時，你會願意分享自己的嗎？如果你很餓，也願意嗎？' },
+                { id: 6, name: '繩索', icon: '🧵', category: 'B 組（團隊合作）', func: '確保安全、連接彼此，在攀爬或通過危險地形時使用。', symbol: '團隊安全的連接線。', extension: '負責任的人會檢查每一段鏈接，確保沒有人掉隊或被遺忘。', question: '你在團體活動中有沒有注意到誰被冷落了？你願意開口或伸手，讓他重新連回大家嗎？' },
+                { id: 12, name: '天幕', icon: '⛺', category: 'B 組（團隊合作）', func: '野外臨時遮蔽防風雨空間，團隊共同依賴的避風港。', symbol: '一個人搭不了天幕，這是最需要團隊合作的裝備之一。', extension: '負責任的人願意主動合作，讓團體在風雨中安心。', question: '暑假或活動中，有人感到害怕或孤單時，你願意主動靠近、一起完成任務嗎？' },
+                { id: 29, name: '行動電源', icon: '🔋', category: 'B 組（團隊合作）', func: '為手機等設備充電，提供續航力。', symbol: '保持續航力，有餘力時也可成為他人後盾。', extension: '負責任的人會預留能量給重要時刻，也願意支持團隊中沒電的人。', question: '當別人沒電（沒動力、沒想法、沒笑容）時，你會如何給他一些充電的力量呢？' },
+                { id: 30, name: '垃圾袋', icon: '🗑️', category: 'B 組（團隊合作）', func: '收納垃圾、保護環境，也是守規則的基本工具。', symbol: '不留下痕跡，是責任的最高境界。', extension: '負責任的人也願意清理不是自己造成的問題，讓環境與關係變得更好。', question: '你會主動撿起不是自己造成的問題（像是亂丟垃圾、吵架後的冷戰），試著讓氣氛變好嗎？' },
+                { id: 25, name: '高山瓦斯', icon: '🔥', category: 'B 組（團隊合作）', func: '煮食與取暖的燃料，是維持團隊活動核心的能量來源。', symbol: '能量不是無限，要謹慎使用。', extension: '負責任的人懂得資源有限，會斟酌使用而非浪費。', question: '在學期中，你會不會把所有力氣用在前幾週，後面卻沒力？你如何分配自己的體力和時間？' },
+                { id: 26, name: '打火機', icon: '✨', category: 'B 組（團隊合作）', func: '點火，帶來溫暖與光明。', symbol: '一點小火，也能燃起希望。', extension: '負責任的人明白自己的行為可能影響團隊氣氛與安全，會選擇合宜時機與方式。', question: '你在學校或家中，有試著讓氣氛更溫暖嗎？你有沒有哪次成功讓大家開心起來？' },
+
+                { id: 2, name: '雨衣', icon: '🧥', category: 'C 組（安全應變）', func: '抵抗風雨，保護自己在惡劣環境中不被淋濕。', symbol: '預防問題，而不是等到事情變糟才反應。', extension: '負責任的人懂得未雨綢繆，會準備好應付突如其來的變化，保護自己也不讓他人替自己收拾爛攤子。', question: '當你發現天氣變了（像是情緒低落、家人生氣、朋友不說話），你會主動做準備還是等事情變糟再處理？' },
+                { id: 3, name: '頭盔', icon: '🪖', category: 'C 組（安全應變）', func: '頭部防護裝備，用來保護自己免於意外傷害。', symbol: '頭腦清楚才能做出負責任的決定。', extension: '負責任的人不會因為方便或面子忽略安全，知道風險時該保護自己與團隊。', question: '當有人取笑你、批評你，或做出危險的事時，你會保護自己的想法與選擇，還是因為怕被笑就照做？' },
+                { id: 17, name: '哨子', icon: '📣', category: 'C 組（安全應變）', func: '發出聲響，在緊急或迷失情況下引起注意，協助搜救。', symbol: '當你願意「發聲」，你就在為自己和他人負責。', extension: '負責任的人不會沉默以對，而會在適當時機勇敢提醒與呼救。', question: '當你看到有人被排擠、嘲笑或受傷時，你會開口提醒或尋求幫助，還是假裝沒看到？' },
+                { id: 28, name: '急救藥包', icon: '🚑', category: 'C 組（安全應變）', func: '處理受傷或不適，是安全與應變的第一線。', symbol: '緊急時的即時行動與關懷。', extension: '負責任的人不只是看到問題，也願意提供行動，支持需要幫助的人。', question: '有朋友心情不好、身體不舒服時，你會主動關心嗎？你想學會怎麼照顧別人嗎？' },
+                { id: 23, name: '濾水器', icon: '💧', category: 'C 組（安全應變）', func: '過濾野外水源，確保飲水安全。', symbol: '學會辨別與選擇，是對訊息與結果的負責。', extension: '負責任的人不輕信所有信息，而是過濾訊息、明辨是非再行動。', question: '當有人傳訊息或說閒話時，你會直接相信，還是先想清楚再決定要不要跟進？' },
+                { id: 18, name: '緊急求生毯', icon: '🛌', category: 'C 組（安全應變）', func: '保溫、避寒、保命；重量輕但在關鍵時刻能保護生命。', symbol: '微小的準備，能帶來巨大的保護。', extension: '負責任的人會先想一步，準備好支持自己或他人的安全與溫暖。', question: '你會在朋友失落、受傷、考試考不好時，說一些安慰的話或給個擁抱嗎？' },
+                { id: 19, name: '證件', icon: '🪪', category: 'C 組（安全應變）', func: '確認身分、緊急送醫時可以減少許多程序與檢查、保障個人權益。', symbol: '面對現實、認識自己，才有力量前進。', extension: '負責任的人知道自己的角色，也願意為所說所做的行為負責。', question: '在別人問你意見、或出錯時，你會勇敢承認自己是誰、做了什麼，還是裝沒事？' },
+                { id: 15, name: '無線電', icon: '📡', category: 'C 組（安全應變）', func: '團隊成員在分散環境中保持即時聯繫、通報位置或緊急狀況。', symbol: '溝通，是責任的延伸，而不是選擇。', extension: '做決定前，你有把訊息傳出去嗎？在團隊中保持聯繫，是對彼此安全與任務的負責。', question: '當你有不開心或需要幫忙時，你會選擇開口聯絡，還是悶在心裡不說？' },
+                { id: 10, name: '直徑割(皮尺)', icon: '📏', category: 'C 組（安全應變）', func: '測量樹木的胸徑，是評估森林資源狀態、樹齡與碳儲量的重要專業工具。', symbol: '衡量不是猜測或判斷，而是為了更了解真實。', extension: '負責任的人不輕率下判斷，而是願意花時間了解事情的真相與深度，才能做出合宜的選擇。', question: '當朋友情緒不好、同學成績退步、家人對你發脾氣時，你會直接下定論，還是願意多問一句、多了解一些再做決定？' },
+                { id: 11, name: '頭燈', icon: '💡', category: 'C 組（安全應變）', func: '黑暗中照明，是夜間或密林中不可或缺的工具。', symbol: '照亮前方，也照亮他人。', extension: '負責任的人願意發光發熱，引導他人走出迷霧與黑暗。', question: '有朋友說心事或遇到困難時，你是認真傾聽、給建議，還是用『沒事啦』輕輕帶過？' },
+                { id: 27, name: '刀具', icon: '🔪', category: 'C 組（安全應變）', func: '削切、修繕、開道、緊急時刻的工具。', symbol: '工具需要掌握，選擇需要判斷。', extension: '負責任的人知道如何控制自己的力量與情緒，做出不傷害自己與他人的選擇。', question: '當你生氣或受傷時，你有不小心傷到別人的經驗嗎？你有學會冷靜處理情緒與反應嗎？' }
+            ];
+
+            const gallery = document.getElementById('card-gallery');
+            const filtersContainer = document.getElementById('filters');
+            const modal = document.getElementById('modal');
+            const modalContent = document.getElementById('modal-content');
+            const modalFront = document.getElementById('modal-front');
+            const modalBack = document.getElementById('modal-back');
+            const closeModalButton = document.getElementById('close-modal-button');
+            const flipButton = document.getElementById('flip-button');
+
+            let activeFilter = '所有';
+
+            const categories = ['所有', ...new Set(equipmentData.map(item => item.category))].sort((a, b) => {
+                if (a === '所有') return -1;
+                if (b === '所有') return 1;
+                return a.localeCompare(b, 'zh-Hant');
+            });
+            const categoryCounts = equipmentData.reduce((acc, item) => {
+                acc[item.category] = (acc[item.category] || 0) + 1;
+                return acc;
+            }, {});
+
+            function renderCards(filter = '所有') {
+                gallery.innerHTML = '';
+                const filteredData = filter === '所有' ? equipmentData : equipmentData.filter(item => item.category === filter);
+                
+                filteredData.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white/80 p-4 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col items-center text-center';
+                    card.innerHTML = `
+                        <div class="text-5xl mb-3">${item.icon}</div>
+                        <h3 class="font-bold text-md text-[#3A5A40]">${item.name}</h3>
+                    `;
+                    card.addEventListener('click', () => openModal(item));
+                    gallery.appendChild(card);
+                });
+            }
+
+            function renderFilters() {
+                filtersContainer.innerHTML = '';
+                categories.forEach(category => {
+                    const button = document.createElement('button');
+                    button.textContent = category;
+                    button.className = `filter-btn px-4 py-2 rounded-full text-sm font-semibold ${activeFilter === category ? 'bg-[#3A5A40] text-white active' : 'bg-white/80 text-[#588157]'}`;
+                    button.addEventListener('click', () => {
+                        activeFilter = category;
+                        renderFilters();
+                        renderCards(activeFilter);
+                    });
+                    filtersContainer.appendChild(button);
+                });
+            }
+
+            function openModal(item) {
+                modalFront.innerHTML = `
+                    <div class="text-8xl mb-4">${item.icon}</div>
+                    <h2 class="text-3xl font-bold text-[#3A5A40]">${item.name}</h2>
+                    <p class="text-lg text-[#588157] mt-2">${item.category}</p>
+                `;
+                modalBack.innerHTML = `
+                    <div class="space-y-4 text-left">
+                        <div>
+                            <h4 class="font-bold text-lg text-[#3A5A40]">✅ 功能</h4>
+                            <p class="text-gray-700">${item.func}</p>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg text-[#3A5A40]">🧭 象徵語</h4>
+                            <p class="text-gray-700 font-semibold">${item.symbol}</p>
+                            <p class="text-gray-600 mt-1 text-sm">➤ ${item.extension}</p>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg text-[#3A5A40]">❓ 提問</h4>
+                            <p class="text-gray-700">${item.question}</p>
+                        </div>
+                    </div>
+                `;
+                modal.classList.remove('hidden');
+                modalContent.classList.remove('is-flipped');
+            }
+
+            function closeModal() {
+                modal.classList.add('hidden');
+            }
+            
+            closeModalButton.addEventListener('click', closeModal);
+            flipButton.addEventListener('click', () => {
+                modalContent.classList.toggle('is-flipped');
+            });
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+
+            function renderChart() {
+                const sortedCategories = Object.keys(categoryCounts).sort((a,b) => a.localeCompare(b, 'zh-Hant'));
+                const sortedCounts = sortedCategories.map(cat => categoryCounts[cat]);
+
+                const ctx = document.getElementById('categoryChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: sortedCategories,
+                        datasets: [{
+                            label: '裝備數量',
+                            data: sortedCounts,
+                            backgroundColor: [
+                                'rgba(58, 90, 64, 0.7)',
+                                'rgba(88, 129, 87, 0.7)',
+                                'rgba(163, 177, 138, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(58, 90, 64, 1)',
+                                'rgba(88, 129, 87, 1)',
+                                'rgba(163, 177, 138, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            title: {
+                                display: true,
+                                text: '裝備類別分佈圖',
+                                font: {
+                                    size: 18,
+                                    family: "'Noto Sans TC', sans-serif"
+                                },
+                                color: '#3A5A40'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 2,
+                                    color: '#4A4A4A'
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: '#4A4A4A'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            renderFilters();
+            renderCards();
+            renderChart();
+        });
+    </script>
+</body>
+</html>
+nitial commit: Add interactive equipment card page
